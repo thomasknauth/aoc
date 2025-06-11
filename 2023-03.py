@@ -79,8 +79,9 @@ test_input='''\
 # 451490. (The * adjacent to 617 is not a gear because it is only adjacent to one part number.)
 # Adding up all of the gear ratios produces 467835.
 
-import sys
+from collections import defaultdict
 import io
+import sys
 
 adjacent = []
 for y in [-1, 0, 1]:
@@ -100,6 +101,20 @@ def is_adjacent_to_symbol(grid, x1, x2, y):
             return True
 
     return False
+
+def is_adjacent_to_gear(grid, x1, x2, y):
+
+    gear_coords = set()
+
+    adjacent_cells = []
+    for x in range(x1, x2+1):
+        adjacent_cells += [(x+xd, y+yd) for (xd, yd) in adjacent]
+
+    for (ax, ay) in adjacent_cells:
+        if grid[ay][ax] != '.' and (not grid[ay][ax].isdigit()):
+            gear_coords.add((ax, ay))
+
+    return gear_coords
 
 def part1(f):
     # Go line by line. If found a digit, look for adjacent symbol.
@@ -138,7 +153,7 @@ def part1(f):
 
     return sum
 
-def part2(fn):
+def part2(f):
     # Go line by line. If found a digit, look for adjacent symbol.
     # Add extra row and column as boundary to avoid special cases later on.
     grid = list(map(lambda s: '.' + s.strip() + '.', f.readlines()))
@@ -149,7 +164,9 @@ def part2(fn):
 
     grid = padded_grid
 
-    sum = 0
+    # For each number adjacent to a gear, we keep a map which associates the number to the gear.
+    # The gears we are looking for have exactly two associated numbers.
+    gear_map = defaultdict(list)
 
     for y in range(1, len(grid)-1):
 
@@ -168,12 +185,19 @@ def part2(fn):
                     end_digit = x - 1
                     # print(y, grid[y][start_digit:end_digit+1])
                     # grid[y] = grid[y][0:start_digit] + '#'*(end_digit-start_digit+1) + grid[y][end_digit+1:]
-                    if is_adjacent_to_symbol(grid, start_digit, end_digit, y):
-                        sum += int(grid[y][start_digit:end_digit+1])
+                    gear_coords = is_adjacent_to_gear(grid, start_digit, end_digit, y)
+                    for gear_coord in gear_coords:
+                        gear_map[gear_coord].append(grid[y][start_digit:end_digit+1])
                 start_digit = None
                 end_digit = None
 
-    return sum
+    total = 0
+
+    for k in gear_map.keys():
+        if len(gear_map[k]) == 2:
+            total += int(gear_map[k][0]) * int(gear_map[k][1])
+
+    return total
 
 if __name__ == '__main__':
 
@@ -183,3 +207,5 @@ if __name__ == '__main__':
 
     print(part1(io.StringIO(test_input)))
     print(part1(open(fn)))
+    print(part2(io.StringIO(test_input)))
+    print(part2(open(fn)))
