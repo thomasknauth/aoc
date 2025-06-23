@@ -84,6 +84,37 @@ QQQJA 483
 
 # Find the rank of every hand in your set. What are the total winnings?
 
+# --- Part Two ---
+
+# To make things a little more interesting, the Elf introduces one additional rule. Now, J cards are
+# jokers - wildcards that can act like whatever card would make the hand the strongest type
+# possible.
+
+# To balance this, J cards are now the weakest individual cards, weaker even than 2. The other cards
+# stay in the same order: A, K, Q, T, 9, 8, 7, 6, 5, 4, 3, 2, J.
+
+# J cards can pretend to be whatever card is best for the purpose of determining hand type; for
+# example, QJJQ2 is now considered four of a kind. However, for the purpose of breaking ties between
+# two hands of the same type, J is always treated as J, not the card it's pretending to be: JKKK2 is
+# weaker than QQQQ2 because J is weaker than Q.
+
+# Now, the above example goes very differently:
+
+# 32T3K 765
+# T55J5 684
+# KK677 28
+# KTJJT 220
+# QQQJA 483
+
+# 32T3K is still the only one pair; it doesn't contain any jokers, so its strength doesn't increase.
+# KK677 is now the only two pair, making it the second-weakest hand. T55J5, KTJJT, and QQQJA are
+# now all four of a kind! T55J5 gets rank 3, QQQJA gets rank 4, and KTJJT gets rank 5.
+
+# With the new joker rule, the total winnings in this example are 5905.
+
+# Using the new joker rule, find the rank of every hand in your set. What are the new total
+# winnings?
+
 from collections import defaultdict
 from enum import Enum
 from functools import cmp_to_key
@@ -105,7 +136,7 @@ class Hands(Enum):
     HIGH_CARD = 4
 
 # Return larger numbers for more powerful hands
-def hand_type(a):
+def hand_type_part1(a):
     m = defaultdict(int)
     for c in a:
         m[c] += 1
@@ -113,17 +144,15 @@ def hand_type(a):
     if len(m.keys()) == 1:
         return Hands.FIVE_OF_A_KIND
 
-    if len(m.keys()) == 2:
-        k1, k2 = m.keys()
-        if m[k1] == 4 or m[k2] == 4:
-            return Hands.FOUR_OF_A_KIND
+    if 4 in m.values():
+        return Hands.FOUR_OF_A_KIND
 
-        if (m[k1] == 3 and m[k2] == 2) or (m[k1] == 2 and m[k2] == 3):
-            return Hands.FULL_HOUSE
-    
+    if 3 in m.values() and 2 in m.values():
+        return Hands.FULL_HOUSE
+
     if 3 in m.values():
         return Hands.THREE_OF_A_KIND
-    
+
     nr_pairs = list(m.values()).count(2)
 
     if nr_pairs == 2:
@@ -133,18 +162,62 @@ def hand_type(a):
 
     return Hands.HIGH_CARD
 
-cards = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'] 
-c2i = dict([(k, v) for (v, k) in enumerate(cards)])
+# Return larger numbers for more powerful hands
+def hand_type_part2(a):
+    m = defaultdict(int)
+    for c in a:
+        m[c] += 1
 
-def cmp(a, b):
+    if len(m.keys()) == 1:
+        return Hands.FIVE_OF_A_KIND
 
-    # print(a, hand_type(a))
-    # print(b, hand_type(b))
+    if 4 in m.values():
+        if 'J' in m.keys():
+            return Hands.FIVE_OF_A_KIND
+        return Hands.FOUR_OF_A_KIND
 
-    delta = hand_type(a).value - hand_type(b).value
+    if 3 in m.values() and 2 in m.values():
+        if 'J' in m.keys():
+            return Hands.FIVE_OF_A_KIND
+        return Hands.FULL_HOUSE
+
+    if 3 in m.values():
+        if 'J' in m.keys():
+            return Hands.FOUR_OF_A_KIND
+        return Hands.THREE_OF_A_KIND
+
+    nr_pairs = list(m.values()).count(2)
+
+    if nr_pairs == 2:
+        if 'J' in m.keys():
+            if m['J'] == 1:
+                return Hands.FULL_HOUSE
+            elif m['J'] == 2:
+                return Hands.FOUR_OF_A_KIND
+        return Hands.TWO_PAIR
+    elif nr_pairs == 1:
+        if 'J' in m.keys():
+            assert m['J'] <= 2
+            return Hands.THREE_OF_A_KIND
+        return Hands.ONE_PAIR
+
+    if 'J' in m.keys():
+        assert m['J'] == 1
+        return Hands.ONE_PAIR
+
+    return Hands.HIGH_CARD
+
+cards_part1 = ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A']
+cards_part2 = ['J', '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'Q', 'K', 'A']
+card2int_part1 = dict([(k, v) for (v, k) in enumerate(cards_part1)])
+card2int_part2 = dict([(k, v) for (v, k) in enumerate(cards_part2)])
+
+def cmp(a, b, card2int, hand_type_f):
+
+    delta = hand_type_f(a).value - hand_type_f(b).value
     if delta == 0:
         for (ca, cb) in zip(a, b):
-            va, vb = c2i[ca], c2i[cb]
+            va, vb = card2int[ca], card2int[cb]
             if va != vb:
                 return va - vb
         raise RuntimeError("unreachable")
@@ -154,12 +227,14 @@ def cmp(a, b):
 def part1(f):
 
     hand2bid = dict([(k, int(v)) for (k, v) in parse_input(f)])
-    sorted_hands = sorted(hand2bid.keys(), key=cmp_to_key(cmp))
+    sorted_hands = sorted(hand2bid.keys(), key=cmp_to_key(lambda a, b: cmp(a, b, card2int_part1, hand_type_part1)))
     return sum([rank * hand2bid[hand] for (rank, hand) in enumerate(sorted_hands, start=1)])
-    
 
 def part2(f):
-    pass
+
+    hand2bid = dict([(k, int(v)) for (k, v) in parse_input(f)])
+    sorted_hands = sorted(hand2bid.keys(), key=cmp_to_key(lambda a, b: cmp(a, b, card2int_part2, hand_type_part2)))
+    return sum([rank * hand2bid[hand] for (rank, hand) in enumerate(sorted_hands, start=1)])
 
 if __name__ == '__main__':
 
@@ -169,4 +244,5 @@ if __name__ == '__main__':
 
     print(part1(io.StringIO(test_input)))
     print(part1(open(fn)))
-    #print(part2(open(fn)))
+    print(part2(io.StringIO(test_input)))
+    print(part2(open(fn)))
