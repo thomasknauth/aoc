@@ -135,18 +135,31 @@ class Grid:
         x, y = i
 
         if x < 0 or y < 0:
-            return '.'
-        if x > len(self.lines[0]):
-            return '.'
-        if y > len(self.lines):
-            return '.'
+            return 'o'
+        if x >= len(self.lines[0]):
+            return 'o'
+        if y >= len(self.lines):
+            return 'o'
 
         return self.lines[y][x]
+
+    def __setitem__(self, key, value):
+        x, y = key
+        if x < 0 or y < 0:
+            return
+        if x > len(self.lines[0]) or y > len(self.lines):
+            return
+        self.lines[y] = self.lines[y][0:x] + value + self.lines[y][x+1:]
+
+    def save(self, file):
+        for line in self.lines:
+            file.write(line+'\n')
 
 def parse_input(f):
 
     lines = list(map(lambda s: s.strip(), f.readlines()))
     return Grid(lines)
+
 
 def next_move(grid, x, y, x_prev, y_prev):
     '''
@@ -179,7 +192,8 @@ m = {'|': [(0, i) for i in [1, -1]],
      'J': [(-1, 0), (0, -1)],
      'F': [(0, 1), (1, 0)],
      'L': [(1, 0), (0, -1)],
-     '7': [(-1, 0), (0, 1)]}
+     '7': [(-1, 0), (0, 1)]
+     }
 
 def part1(f):
 
@@ -206,12 +220,75 @@ def part1(f):
         steps += 1
 
     return steps//2
-# 
+
+def fill(grid, x, y, heading):
+
+    xd, yd = 0, 0
+    if heading == (0, -1): # up
+        xd = 1
+    elif heading == (0, 1): # down
+        xd = -1
+    elif heading == (-1, 0): # left
+        yd = -1
+    elif heading == (1, 0): # right
+        yd = 1
+    else:
+        raise RuntimeError()
+
+    while grid[x+xd, y+yd] in '.x':
+
+        grid[x+xd, y+yd] = 'x'
+        x += xd
+        y += yd
+
 def part2(f):
 
     input = parse_input(f)
 
-    return input
+    # Start position
+    y0 = next(i for i, s in enumerate(input.lines) if 'S' in s)
+    x0 = input.lines[y0].index('S')
+
+    # print('start', x0, y0)
+
+    xd, yd = possible_start_moves(input, x0, y0)[0]
+    x1, y1 = x0+xd, y0+yd
+
+    # print('start move', xd, yd)
+
+    steps = 1
+    outline = [(x0, y0)]
+    while input[x1, y1] != 'S':
+        outline.append((x1, y1))
+        x2, y2 = next_move(input, x1, y1, x0, y0)
+        xd, yd = x2-x1, y2-y1
+        # print(xd, yd)
+        x0, y0 = x1, y1
+        x1, y1 = x2, y2
+        steps += 1
+
+    empty_grid = Grid(['.'*len(input.lines[0]) for _ in range(len(input.lines))])
+
+    for (x, y) in outline:
+        empty_grid[x, y] = input[x, y]
+
+    # empty_grid.save(open('no_junk_grid.txt', 'wt'))
+
+    # The insight is that if we always move clockwise along the perimeter, the inside will always be to the right in the direction we are moving.
+    # We fill all tiles to the right of the current tile until we hit a wall or grid edge.
+    # The tricky bit is that corners "have two directions", marked 1 and 2 in the below illustration.
+
+    x0, y0 = outline[0]
+    for (x1, y1) in outline[1:]:
+        xd, yd = x1-x0, y1-y0
+        # print('fill', x1, y1, xd, yd)
+        fill(empty_grid, x1, y1, (xd, yd))
+        fill(empty_grid, x0, y0, (xd, yd))
+        x0, y0 = x1, y1
+
+    # empty_grid.save(open('final_grid.txt', 'wt'))
+
+    return sum([l.count('x') for l in empty_grid.lines])
 
 if __name__ == '__main__':
 
@@ -222,4 +299,4 @@ if __name__ == '__main__':
     # print(part1(io.StringIO(test_input)))
     print(part1(open(fn)))
     # print(part2(io.StringIO(test_input)))
-    # print(part2(open(fn)))
+    print(part2(open(fn)))
