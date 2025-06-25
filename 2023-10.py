@@ -267,12 +267,12 @@ def part2(f):
         x1, y1 = x2, y2
         steps += 1
 
-    empty_grid = Grid(['.'*len(input.lines[0]) for _ in range(len(input.lines))])
+    clean_grid = Grid(['.'*len(input.lines[0]) for _ in range(len(input.lines))])
 
     for (x, y) in outline:
-        empty_grid[x, y] = input[x, y]
+        clean_grid[x, y] = input[x, y]
 
-    # empty_grid.save(open('no_junk_grid.txt', 'wt'))
+    # clean_grid.save(open('no_junk_grid.txt', 'wt'))
 
     # The insight is that if we always move clockwise along the perimeter, the inside will always be to the right in the direction we are moving.
     # We fill all tiles to the right of the current tile until we hit a wall or grid edge.
@@ -282,13 +282,13 @@ def part2(f):
     for (x1, y1) in outline[1:]:
         xd, yd = x1-x0, y1-y0
         # print('fill', x1, y1, xd, yd)
-        fill(empty_grid, x1, y1, (xd, yd))
-        fill(empty_grid, x0, y0, (xd, yd))
+        fill(clean_grid, x1, y1, (xd, yd))
+        fill(clean_grid, x0, y0, (xd, yd))
         x0, y0 = x1, y1
 
-    # empty_grid.save(open('final_grid.txt', 'wt'))
+    # clean_grid.save(open('final_grid.txt', 'wt'))
 
-    return sum([l.count('x') for l in empty_grid.lines])
+    return sum([l.count('x') for l in clean_grid.lines])
 
 if __name__ == '__main__':
 
