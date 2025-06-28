@@ -151,10 +151,22 @@ class Grid:
             return
         self.lines[y] = self.lines[y][0:x] + value + self.lines[y][x+1:]
 
+    def __str__(self):
+        s = ''
+        for line in self.lines:
+            s += line+'\n'
+        return s
+
     def save(self, file):
         for line in self.lines:
             file.write(line+'\n')
 
+    def x_dim(self):
+        return len(self.lines[0])
+
+    def y_dim(self):
+        return len(self.lines)
+    
 def parse_input(f):
 
     lines = list(map(lambda s: s.strip(), f.readlines()))
