@@ -5,60 +5,6 @@ import sys
 def parse_input(f):
 
     return [x.strip() for x in f.readlines()]
-    # inputs = []
-    # one_input = []
-    # for line in f.readlines():
-    #     line = line.strip()
-    #     if line == "":
-    #         inputs.append(one_input)
-    #         one_input = []
-    #     else:
-    #         one_input.append(line)
-
-    # if len(one_input) > 0:
-    #     inputs.append(one_input)
-
-    # return inputs
-
-
-class Solver:
-
-    def solve(self, grid) -> int:
-        """
-        Scan for horizontal reflections.
-        
-        To check for vertical reflections, transpose() the input.
-        """
-
-        for i in range(1, len(grid)):
-            up, down = i - 1, i
-            while up >= 0 and down < len(grid):
-                # If rows differ, this is not a flection.
-                if grid[up] != grid[down]:
-                    break
-                up -= 1
-                down += 1
-            # If either index/direction reached the end of the grid, all up/down line pairs up to
-            # this point where identical, i.e., this is the solution.
-            if up < 0 or down >= len(grid):
-                return i
-
-        return None
-
-    def solve_part2(self, grid) -> list[int]:
-
-        diffs = []
-
-        for i in range(1, len(grid)):
-            up, down = i - 1, i
-            diff = 0
-            while up >= 0 and down < len(grid):
-                diff += sum([a != b for (a, b) in zip(grid[up], grid[down])])
-                up -= 1
-                down += 1
-            diffs += [(i, diff)]
-
-        return diffs
 
 
 def transpose(grid):
@@ -69,19 +15,23 @@ def transpose(grid):
     return new_grid
 
 
-def part1(f):
+def rotate_90_clockwise(g):
+    g = transpose(g)
+    for i in range(len(g)):
+        # s[::-1] is Python's cryptic way of reversing a string.
+        g[i] = g[i][::-1]
+    return g
 
-    # grid[y][x]
-    grid = parse_input(f)
 
-    # Slide rocks.
+def slide_rocks(grid):
+
     for y in range(1, len(grid)):
         for x in range(len(grid[0])):
-            if grid[y][x] == "O" and grid[y-1][x] == '.':
+            if grid[y][x] == "O" and grid[y - 1][x] == ".":
                 # How far does the rock slide?
-                y_target = y-1
+                y_target = y - 1
                 while y_target >= 0:
-                    if grid[y_target][x] != '.':
+                    if grid[y_target][x] != ".":
                         y_target += 1
                         break
                     y_target -= 1
@@ -89,21 +39,51 @@ def part1(f):
                 if y_target < 0:
                     y_target = 0
 
-                grid[y_target] = grid[y_target][:x] + "O" + grid[y_target][x+1:]
-                grid[  y] = grid[  y][:x] + "." + grid[  y][x+1:]
+                grid[y_target] = grid[y_target][:x] + "O" + grid[y_target][x + 1 :]
+                grid[y] = grid[y][:x] + "." + grid[y][x + 1 :]
 
+    return grid
+
+
+def score(g):
     acc = 0
-    for row in range(len(grid)):
-        acc += grid[row].count("O") * (len(grid)-row)
+    for row in range(len(g)):
+        acc += g[row].count("O") * (len(g) - row)
     return acc
 
 
+def part1(f):
+
+    grid = parse_input(f)
+    grid = slide_rocks(grid)
+    return score(grid)
+
+
 def part2(f):
-    """
-    """
-    inputs = parse_input(f)
-    solver = Solver()
-    return 0
+    """ """
+    g = parse_input(f)
+    states = {}
+    i = 1
+    while True:
+        for _ in range(4):
+            g = slide_rocks(g)
+            g = rotate_90_clockwise(g)
+
+        # Hash g to make it suitable for indexing the dict/map.
+        h = hash(tuple(g))
+
+        if h in states:
+            pre_cycle_steps = states[h][0]
+            cycle_len = i - pre_cycle_steps
+            # It took a while until I realized I had to add the pre-cycle steps to the cycle index to arrive at the correct index when looking up the final state.
+            final_state = (
+                1_000_000_000 - pre_cycle_steps
+            ) % cycle_len + pre_cycle_steps
+            return [v[1] for (k, v) in states.items() if v[0] == final_state][0]
+        else:
+            states[h] = (i, score(g))
+        i += 1
+    assert False, "unreachable"
 
 
 if __name__ == "__main__":
@@ -116,5 +96,5 @@ if __name__ == "__main__":
 
     print("test part1=", part1(open(test_file)))
     print("part1=", part1(open(input_file)))
-    # print("test part2=", part2(open(test_file)))
-    # print("part2=", part2(open(input_file)))
+    print("test part2=", part2(open(test_file)))
+    print("part2=", part2(open(input_file)))
