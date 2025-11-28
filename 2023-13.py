@@ -1,6 +1,7 @@
 import io
 import sys
 
+
 def parse_input(f):
 
     inputs = []
@@ -18,44 +19,54 @@ def parse_input(f):
 
     return inputs
 
+
 class Solver:
 
-    # def __init__(self):
-    #     pass
-
     def solve(self, grid) -> int:
+        """
+        Scan for horizontal reflections.
+        
+        To check for vertical reflections, transpose() the input.
+        """
 
-        # Scan rows.
-        i = 1
-
-        while i < len(grid):
-            up, down = i-1, i
+        for i in range(1, len(grid)):
+            up, down = i - 1, i
             while up >= 0 and down < len(grid):
-                # rows are identical
+                # If rows differ, this is not a flection.
                 if grid[up] != grid[down]:
                     break
                 up -= 1
                 down += 1
+            # If either index/direction reached the end of the grid, all up/down line pairs up to
+            # this point where identical, i.e., this is the solution.
             if up < 0 or down >= len(grid):
                 return i
-            i+=1
 
         return None
 
+    def solve_part2(self, grid) -> list[int]:
+
+        diffs = []
+
+        for i in range(1, len(grid)):
+            up, down = i - 1, i
+            diff = 0
+            while up >= 0 and down < len(grid):
+                diff += sum([a != b for (a, b) in zip(grid[up], grid[down])])
+                up -= 1
+                down += 1
+            diffs += [(i, diff)]
+
+        return diffs
+
+
 def transpose(grid):
-    """
-    """
+    """ """
     new_grid = []
     for col in range(len(grid[0])):
-        new_grid.append(''.join([grid[i][col] for i in range(len(grid))]))
+        new_grid.append("".join([grid[i][col] for i in range(len(grid))]))
     return new_grid
 
-def test_solver():
-
-    solver = Solver()
-    for i1, i2, o in read_tests():
-        s = solver.solver(i1, i2)
-        assert s == o, f"solutions({i1}, {i2}), expected: {o}, actual: {s}"
 
 def part1(f):
 
@@ -63,35 +74,50 @@ def part1(f):
     solver = Solver()
     acc = 0
     for input in inputs:
+        # Check rows for horizontal reflection.
         r1 = solver.solve(input)
         if r1:
             acc += r1 * 100
 
+        # Check columns for vertical reflection.
         r2 = solver.solve(transpose(input))
         if r2:
             acc += r2
         assert r1 or r2
     return acc
 
-def part2(f):
-    return 0
 
-def read_tests():
-    testcases = []
-    # for line in open("2023-13-test.txt").readlines():
-    #     i1, i2, o = line.split()
-    #     i2 = list(map(int, i2.split(",")))
-    #     o = int(o)
-    #     testcases.append((i1, i2, o))
-    return testcases
+def part2(f):
+    """For Part 2, instead of checking for equality between rows, sum up the number of differing
+    symbols between rows. Do this for all possible "reflection lines". There must be a row or column
+    where only one symbol is different, i.e., the sum of differences is 1.
+
+    """
+    inputs = parse_input(f)
+    solver = Solver()
+    acc = 0
+    for input in inputs:
+        # Check rows for horizontal reflection.
+        diffs = solver.solve_part2(input)
+        i = [i for (i, diff) in diffs if diff == 1]
+        if i:
+            acc += i[0] * 100
+
+        # Check columns for vertical reflection.
+        diffs = solver.solve_part2(transpose(input))
+        i = [i for (i, diff) in diffs if diff == 1]
+        if i:
+            acc += i[0]
+    return acc
+
 
 if __name__ == "__main__":
 
-    fn = "2023-13-input.txt"
+    input_file = sys.argv[0].replace(".py", "-input.txt")
     if len(sys.argv) > 1:
-        fn = sys.argv[1]
+        input_file = sys.argv[1]
 
-    print("test part1=", part1(open('2023-13-test.txt')))
-    print("part1=", part1(open(fn)))
-    # print("test part2=", part2(open('2023-13-test.txt')))
-    # print("part2=", part2(open(fn)))
+    print("test part1=", part1(open("2023-13-test.txt")))
+    print("part1=", part1(open(input_file)))
+    print("test part2=", part2(open("2023-13-test.txt")))
+    print("part2=", part2(open(input_file)))
