@@ -7,16 +7,13 @@ def parse_input(f):
     return [line.strip() for line in f.readlines()]
 
 
-def part1(f) -> int:
-
-    # grid[y][x] - first index is y, second index is x dimension.
-    grid = parse_input(f)
+def solve(grid, x, y, xd, yd) -> int:
+    """grid[y][x] - first index is y, second index is x dimension."""
 
     # Track x, y and direction (xd, yd) to detect cycles.
-    visited = set() # [(x, y, xd, yd)]
+    visited = set()  # [(x, y, xd, yd)]
 
-    # Start "off grid", i.e., x=-1, to correctly determine what needs to happen on first square.
-    pos = [(-1, 0, 1, 0)]
+    pos = [(x, y, xd, yd)]
 
     while len(pos) > 0:
         (x, y, xd, yd) = pos.pop()
@@ -36,13 +33,13 @@ def part1(f) -> int:
                 if yd == 0:
                     pos.append((x, y, xd, yd))
                 else:
-                    pos.append((x, y,  1, 0))
+                    pos.append((x, y, 1, 0))
                     pos.append((x, y, -1, 0))
             case "|":
                 if xd == 0:
                     pos.append((x, y, xd, yd))
                 else:
-                    pos.append((x, y, 0,  1))
+                    pos.append((x, y, 0, 1))
                     pos.append((x, y, 0, -1))
             case "/":
                 if xd:
@@ -59,24 +56,36 @@ def part1(f) -> int:
                 else:
                     xd = yd
                     yd = 0
-                pos.append((x, y, xd, yd))            
+                pos.append((x, y, xd, yd))
             case _:
                 assert False, "illegal state/input"
-
-    # for (x, y, _, _) in visited:
-    #     grid[y] = grid[y][:x] + "#" + grid[y][x+1:]
-
-    # for line in grid:
-    #     print(line)
 
     return len(set([(x, y) for (x, y, _, _) in visited]))
 
 
+def part1(f) -> int:
+
+    grid = parse_input(f)
+
+    return solve(grid, -1, 0, 1, 0)
+
+
 def part2(f) -> int:
+    """Reuse computation from Part 1 for all possible starting configurations.
 
-    input = parse_input(f)
+    Finishes in ~1 second. No caching of intermediate/partial results needed.
+    """
+    # grid[y][x] - first index is y, second index is x dimension.
+    grid = parse_input(f)
 
-    return -1
+    pos = (
+        [(-1, y, 1, 0) for y in range(len(grid))]
+        + [(len(grid[0]), y, -1, 0) for y in range(len(grid))]
+        + [(x, -1, 0, 1) for x in range(len(grid[0]))]
+        + [(x, len(grid), 0, -1) for x in range(len(grid[0]))]
+    )
+
+    return max([solve(grid, *p) for p in pos])
 
 
 if __name__ == "__main__":
@@ -89,5 +98,5 @@ if __name__ == "__main__":
 
     print("test part1=", part1(open(test_file)))
     print("part1=", part1(open(input_file)))
-    # print("test part2=", part2(open(test_file)))
-    # print("part2=", part2(open(input_file)))
+    print("test part2=", part2(open(test_file)))
+    print("part2=", part2(open(input_file)))
